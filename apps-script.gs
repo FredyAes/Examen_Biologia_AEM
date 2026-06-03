@@ -1,257 +1,170 @@
-const SHEET_NAME = "Respuestas";
-const EXAM_ID = "biologia_ent_2026";
-const EXAM_WINDOW = {
-  startAt: "2026-01-01T00:00:00-06:00",
-  endAt: "2026-12-31T23:59:59-06:00"
-};
+// ─── CONFIGURACIÓN ───────────────────────────────────────────────
+const SHEET_NAME   = "Respuestas";
+const EXAM_ID      = "biologia_ent_2026";
 
-const QUESTIONS = [
-  { number: 1, answer: "Diabetes" },
-  { number: 2, answer: "A) Obesidad" },
-  { number: 3, answer: "35%" },
-  { number: 4, answer: "Leptina y grelina" },
-  { number: 5, answer: "Rapida y procesada" },
-  { number: 6, answer: "Caloria" },
-  { number: 7, answer: "2000" },
-  { number: 8, answer: "Diabetes" },
-  { number: 9, answer: "Insulina" },
-  { number: 10, answer: "Diabetes tipo 1" },
-  { number: 11, answer: "Verdadero" },
-  { number: 12, answer: "Falso" },
-  { number: 13, answer: "Verdadero" },
-  { number: 14, answer: "Falso." },
-  { number: 15, answer: "Verdadero." },
-  { number: 16, answer: "Estres." },
-  { number: 17, answer: "Enfermedades no transmisibles" },
-  { number: 18, answer: "Beber 2 litros de agua diarios." },
-  { number: 19, answer: "Diabetes tipo 2" },
-  { number: 20, answer: "Resistencia a la insulina." }
+// Respuestas correctas para recalificar en el servidor
+const ANSWER_KEY = [
+  "Diabetes",
+  "A) Obesidad",
+  "35%",
+  "Leptina y grelina",
+  "Rapida y procesada",
+  "Caloria",
+  "2000",
+  "Diabetes",
+  "Insulina",
+  "Diabetes tipo 1",
+  "Verdadero",
+  "Falso",
+  "Verdadero",
+  "Falso.",
+  "Verdadero.",
+  "Estres.",
+  "Enfermedades no transmisibles",
+  "Beber 2 litros de agua diarios.",
+  "Diabetes tipo 2",
+  "Resistencia a la insulina."
 ];
 
-function doGet(event) {
-  return jsonResponse({ ok: false, message: "Usa POST para enviar el examen." });
+// ─── CORS: responde OPTIONS y GET sin error ───────────────────────
+function doGet() {
+  return buildResponse({ ok: true, message: "Servicio activo." });
 }
 
-function doPost(event) {
+// ─── ENDPOINT PRINCIPAL ───────────────────────────────────────────
+function doPost(e) {
   const lock = LockService.getScriptLock();
-  lock.waitLock(10000);
+  try {
+    lock.waitLock(15000);
+  } catch (_) {
+    return buildResponse({ ok: false, message: "El servidor esta ocupado, intenta de nuevo." });
+  }
 
   try {
-    const payload = JSON.parse(event.postData.contents || "{}");
-    const validation = validatePayload(payload);
-    if (!validation.ok) {
-      return jsonResponse({ ok: false, message: validation.message });
+    // 1. Parsear payload
+    let payload;
+    try {
+      payload = JSON.parse(e.postData.contents);
+    } catch (_) {
+      return buildResponse({ ok: false, message: "Datos mal formados." });
     }
 
-    const sheet = getSheet();
-    const duplicate = findDuplicate(sheet, payload.email, payload.group, payload.studentName);
-    if (duplicate) {
-      return jsonResponse({ ok: false, message: "Ya existe una respuesta registrada para este alumno." });
+    // 2. Validacion basica (solo estructura, sin validar opciones especificas)
+    const err = validate(payload);
+    if (err) return buildResponse({ ok: false, message: err });
+
+    // 3. Obtener/crear hoja
+    const sheet = getOrCreateSheet();
+
+    // 4. Verificar duplicado por correo
+    const email = normalizeEmail(payload.email);
+    if (isDuplicate(sheet, email)) {
+      return buildResponse({ ok: false, message: "Este correo ya tiene una respuesta registrada." });
     }
 
-    const graded = gradeAnswers(payload.answers);
-    const row = buildRow(payload, graded);
+    // 5. Recalificar en servidor
+    const answers = payload.answers; // array de strings, una por pregunta
+    let correct = 0;
+    answers.forEach(function(ans, i) {
+      if (ANSWER_KEY[i] && String(ans).trim() === ANSWER_KEY[i]) correct++;
+    });
+    const total     = ANSWER_KEY.length;
+    const incorrect = total - correct;
+    const score     = Math.round((correct / total) * 100);
+
+    // 6. Guardar fila
+    const now = new Date();
+    const row = [
+      now,                                          // A: Fecha registro
+      normalizeEmail(payload.email),                // B: Correo
+      String(payload.group || ""),                  // C: Grupo
+      normalizeName(payload.studentName),           // D: Nombre
+      payload.startedAt  ? new Date(payload.startedAt)  : now, // E: Inicio
+      payload.finishedAt ? new Date(payload.finishedAt) : now, // F: Termino
+      Number(payload.durationSeconds) || 0,         // G: Duracion (s)
+      total,                                        // H: Total preguntas
+      correct,                                      // I: Correctas
+      incorrect,                                    // J: Incorrectas
+      score                                         // K: Calificacion (%)
+    ];
+
+    // Agregar cada respuesta como columna extra (L en adelante)
+    answers.forEach(function(ans) { row.push(String(ans)); });
+
     sheet.appendRow(row);
 
-    return jsonResponse({
-      ok: true,
-      message: "Respuesta guardada",
-      score: graded.score,
-      correctCount: graded.correctCount,
-      incorrectCount: graded.incorrectCount
-    });
-  } catch (error) {
-    return jsonResponse({ ok: false, message: "Error al guardar: " + error.message });
+    return buildResponse({ ok: true, message: "Examen guardado correctamente." });
+
+  } catch (err) {
+    return buildResponse({ ok: false, message: "Error del servidor: " + err.message });
   } finally {
     lock.releaseLock();
   }
 }
 
-function getSheet() {
-  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
-  let sheet = spreadsheet.getSheetByName(SHEET_NAME);
+// ─── HELPERS ─────────────────────────────────────────────────────
+
+function validate(p) {
+  if (!p || typeof p !== "object")          return "Payload invalido.";
+  if (p.examId !== EXAM_ID)                 return "ID de examen incorrecto.";
+  if (!p.email || !p.email.includes("@"))   return "Correo invalido.";
+  if (!p.studentName || p.studentName.trim().length < 3) return "Nombre invalido.";
+  if (!p.group)                             return "Grupo requerido.";
+  if (!Array.isArray(p.answers) || p.answers.length === 0) return "Sin respuestas.";
+  return null; // sin error
+}
+
+function getOrCreateSheet() {
+  const ss    = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet   = ss.getSheetByName(SHEET_NAME);
 
   if (!sheet) {
-    sheet = spreadsheet.insertSheet(SHEET_NAME);
+    sheet = ss.insertSheet(SHEET_NAME);
   }
 
-  const headers = [
-    "Registrado en",
-    "Exam ID",
-    "Correo",
-    "Grupo",
-    "Nombre",
-    "Inicio",
-    "Termino",
-    "Duracion segundos",
-    "Total preguntas",
-    "Correctas",
-    "Incorrectas",
-    "Calificacion",
-    ...QUESTIONS.map((question) => "P" + question.number),
-    ...QUESTIONS.map((question) => "P" + question.number + " correcta")
-  ];
-
+  // Crear encabezados si la hoja esta vacia
   if (sheet.getLastRow() === 0) {
+    const headers = [
+      "Fecha registro", "Correo", "Grupo", "Nombre",
+      "Inicio", "Termino", "Duracion (s)",
+      "Total Preguntas", "Correctas", "Incorrectas", "Calificacion (%)"
+    ];
+    for (var i = 1; i <= ANSWER_KEY.length; i++) {
+      headers.push("P" + i);
+    }
     sheet.appendRow(headers);
+    sheet.setFrozenRows(1);
+
+    // Formato de encabezado
+    var headerRange = sheet.getRange(1, 1, 1, headers.length);
+    headerRange.setBackground("#0f766e");
+    headerRange.setFontColor("#ffffff");
+    headerRange.setFontWeight("bold");
   }
 
   return sheet;
 }
 
-function validatePayload(payload) {
-  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-  const namePattern = /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+(?:\s+[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+)+$/;
-
-  if (payload.examId !== EXAM_ID) {
-    return { ok: false, message: "Examen no permitido." };
-  }
-
-  if (!emailPattern.test(String(payload.email || "").trim().toLowerCase())) {
-    return { ok: false, message: "Correo no valido." };
-  }
-
-  if (!/^[1-9]$/.test(String(payload.group || ""))) {
-    return { ok: false, message: "Grupo no permitido." };
-  }
-
-  if (!namePattern.test(normalizeName(payload.studentName || ""))) {
-    return { ok: false, message: "Nombre no valido." };
-  }
-
-  if (!isValidDate(payload.startedAt) || !isValidDate(payload.finishedAt)) {
-    return { ok: false, message: "Fechas no validas." };
-  }
-
-  if (new Date(payload.finishedAt).getTime() < new Date(payload.startedAt).getTime()) {
-    return { ok: false, message: "La hora de termino no puede ser anterior al inicio." };
-  }
-
-  if (!isWithinExamWindow(payload.startedAt) || !isWithinExamWindow(payload.finishedAt)) {
-    return { ok: false, message: "El examen esta fuera del horario permitido." };
-  }
-
-  if (!Array.isArray(payload.answers) || payload.answers.length !== QUESTIONS.length) {
-    return { ok: false, message: "El examen debe tener todas las respuestas." };
-  }
-
-  const allowedAnswersByQuestion = getAllowedAnswersByQuestion();
-  const receivedQuestions = {};
-  for (const answer of payload.answers) {
-    const number = Number(answer.questionNumber);
-    if (receivedQuestions[number]) {
-      return { ok: false, message: "La pregunta " + number + " esta repetida." };
-    }
-    receivedQuestions[number] = true;
-    if (!allowedAnswersByQuestion[number] || !allowedAnswersByQuestion[number].includes(String(answer.selected || ""))) {
-      return { ok: false, message: "Respuesta no permitida en la pregunta " + number + "." };
-    }
-  }
-
-  for (const question of QUESTIONS) {
-    if (!receivedQuestions[question.number]) {
-      return { ok: false, message: "Falta la pregunta " + question.number + "." };
-    }
-  }
-
-  return { ok: true };
-}
-
-function findDuplicate(sheet, email, group, studentName) {
+function isDuplicate(sheet, email) {
   const lastRow = sheet.getLastRow();
-  if (lastRow < 2) {
-    return false;
-  }
+  if (lastRow < 2) return false; // solo encabezado, sin datos
 
-  const normalizedEmail = String(email).trim().toLowerCase();
-  const normalizedName = normalizeName(studentName).toLowerCase();
-  const values = sheet.getRange(2, 3, lastRow - 1, 3).getValues();
-
-  return values.some((row) => {
-    const rowEmail = String(row[0]).trim().toLowerCase();
-    const rowGroup = String(row[1]).trim();
-    const rowName = normalizeName(row[2]).toLowerCase();
-    return rowEmail === normalizedEmail || (rowGroup === String(group) && rowName === normalizedName);
+  // Columna B (índice 2) = correo
+  const emails = sheet.getRange(2, 2, lastRow - 1, 1).getValues();
+  return emails.some(function(row) {
+    return normalizeEmail(String(row[0])) === email;
   });
 }
 
-function gradeAnswers(answers) {
-  const answerMap = {};
-  answers.forEach((answer) => {
-    answerMap[Number(answer.questionNumber)] = String(answer.selected || "");
-  });
-
-  let correctCount = 0;
-  QUESTIONS.forEach((question) => {
-    if (answerMap[question.number] === question.answer) {
-      correctCount += 1;
-    }
-  });
-
-  const incorrectCount = QUESTIONS.length - correctCount;
-  const score = Math.round((correctCount / QUESTIONS.length) * 100);
-  return { correctCount, incorrectCount, score, answerMap };
+function normalizeEmail(v) {
+  return String(v || "").trim().toLowerCase();
 }
 
-function buildRow(payload, graded) {
-  return [
-    new Date(),
-    EXAM_ID,
-    String(payload.email).trim().toLowerCase(),
-    String(payload.group),
-    normalizeName(payload.studentName),
-    new Date(payload.startedAt),
-    new Date(payload.finishedAt),
-    Number(payload.durationSeconds),
-    QUESTIONS.length,
-    graded.correctCount,
-    graded.incorrectCount,
-    graded.score,
-    ...QUESTIONS.map((question) => graded.answerMap[question.number]),
-    ...QUESTIONS.map((question) => graded.answerMap[question.number] === question.answer)
-  ];
+function normalizeName(v) {
+  return String(v || "").trim().replace(/\s+/g, " ");
 }
 
-function getAllowedAnswersByQuestion() {
-  return {
-    1: ["Diabetes", "Viruela", "Sarampion", "Rubeola"],
-    2: ["A) Obesidad", "Calorias", "Insulina", "Genetico"],
-    3: ["35%", "45%", "25%", "75%"],
-    4: ["Leptina y grelina", "Leptina y grenetina", "Cortisol", "Vaselina"],
-    5: ["Gourmet", "Rapida y procesada", "Saludable", "Vegana"],
-    6: ["Energia", "Caloria", "Mol", "Atomo"],
-    7: ["1000", "2000", "3000", "8000"],
-    8: ["Cancer", "Diabetes", "Hipertension", "Covid"],
-    9: ["Insulina", "Leptina", "Cortisol", "Grenetina"],
-    10: ["Diabetes tipo 1", "Diabetes tipo 2", "Diabetes tipo 3", "Diabetes tipo 4"],
-    11: ["Verdadero", "Falso", "Ninguna", "Ni verdadero ni falso"],
-    12: ["Verdadero", "Falso", "Ni Verdadero ni falso.", "Ninguna"],
-    13: ["Verdadero", "Falso", "Ni verdadero ni falso.", "Ninguna"],
-    14: ["Verdadero.", "Falso.", "Ni verdadero ni falso.", "Ninguna."],
-    15: ["Verdadero.", "Falso", "Ni verdadero ni falso", "Ninguna"],
-    16: ["Insulina", "Estres.", "Pancreas", "Calorias"],
-    17: ["Enfermedades no transmisibles", "Enfermedades infecciosas", "Enfermedades geneticas.", "Enfermedades fungi."],
-    18: ["Comer pizza y pollo frito.", "Beber 2 litros de agua diarios.", "Evitar realizar ejercicio y actividad fisica.", "Fumar y beber cerveza"],
-    19: ["Diabetes tipo 1", "Diabetes tipo 2", "Diabetes tipo 3", "Diabetes tipo 4"],
-    20: ["Resistencia a la obesidad.", "Resistencia a la insulina.", "Resistencia electrica", "Resistencia al trabajo."]
-  };
-}
-
-function isValidDate(value) {
-  const date = new Date(value);
-  return value && !Number.isNaN(date.getTime());
-}
-
-function isWithinExamWindow(value) {
-  const date = new Date(value);
-  return date >= new Date(EXAM_WINDOW.startAt) && date <= new Date(EXAM_WINDOW.endAt);
-}
-
-function normalizeName(value) {
-  return String(value || "").trim().replace(/\s+/g, " ");
-}
-
-function jsonResponse(data) {
+function buildResponse(data) {
   return ContentService
     .createTextOutput(JSON.stringify(data))
     .setMimeType(ContentService.MimeType.JSON);
