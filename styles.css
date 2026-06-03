@@ -8,9 +8,11 @@
   --teal: #0f766e;
   --teal-dark: #115e59;
   --mint: #c9f2df;
+  --lime: #d8f06b;
   --amber: #f6b449;
   --coral: #e85d5a;
   --blue: #2878bd;
+  --violet: #7c4fd6;
   --shadow: 0 24px 70px rgba(17, 94, 89, 0.16);
 }
 
@@ -28,8 +30,10 @@ body {
   font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 18px;
   background:
-    radial-gradient(circle at 18% 4%, rgba(246, 180, 73, 0.26), transparent 28rem),
-    linear-gradient(135deg, #e9f8f0 0%, #edf5fb 52%, #f8f3e7 100%);
+    radial-gradient(circle at 14% 8%, rgba(246, 180, 73, 0.28), transparent 25rem),
+    radial-gradient(circle at 84% 18%, rgba(40, 120, 189, 0.18), transparent 24rem),
+    radial-gradient(circle at 76% 88%, rgba(232, 93, 90, 0.12), transparent 25rem),
+    linear-gradient(135deg, #eaf8f0 0%, #eff7fd 46%, #fff5df 100%);
   color: var(--ink);
 }
 
@@ -62,8 +66,11 @@ select {
   display: grid;
   grid-template-columns: minmax(0, 1.3fr) minmax(280px, 0.7fr);
   min-height: 330px;
-  background: linear-gradient(120deg, #0f766e 0%, #27806f 45%, #f0b64f 100%);
+  background:
+    radial-gradient(circle at 86% 18%, rgba(255, 255, 255, 0.24), transparent 9rem),
+    linear-gradient(120deg, #0f766e 0%, #2878bd 47%, #f0b64f 100%);
   color: #fff;
+  transition: min-height 0.3s ease;
 }
 
 .hero-copy {
@@ -96,6 +103,32 @@ select {
   color: rgba(255, 255, 255, 0.9);
   font-size: clamp(1.08rem, 2.5vw, 1.24rem);
   line-height: 1.6;
+}
+
+.hero-instructions {
+  transition: opacity 0.2s ease, max-height 0.25s ease, margin 0.25s ease;
+}
+
+body[data-view="waiting"] .hero,
+body[data-view="thanks"] .hero {
+  min-height: 220px;
+  background:
+    radial-gradient(circle at 78% 16%, rgba(216, 240, 107, 0.28), transparent 8rem),
+    linear-gradient(120deg, #0f766e 0%, #2f7db4 52%, #e85d5a 100%);
+}
+
+body[data-view="waiting"] .hero-instructions,
+body[data-view="thanks"] .hero-instructions {
+  max-height: 0;
+  margin: 0;
+  opacity: 0;
+  overflow: hidden;
+  visibility: hidden;
+}
+
+body[data-view="waiting"] .hero h1,
+body[data-view="thanks"] .hero h1 {
+  font-size: clamp(2rem, 5vw, 3.5rem);
 }
 
 .hero-visual {
@@ -160,19 +193,71 @@ select {
 .gate-view,
 .thanks-view {
   display: grid;
-  gap: 18px;
-  min-height: 360px;
+  gap: 22px;
+  min-height: 430px;
   align-content: center;
-  background: linear-gradient(180deg, #fff 0%, #f7fcfa 100%);
+  position: relative;
+  overflow: hidden;
+  background:
+    linear-gradient(90deg, rgba(15, 118, 110, 0.06), transparent 52%),
+    linear-gradient(180deg, #fff 0%, #f7fcfa 100%);
 }
 
-.gate-view > p,
-.thanks-view > p {
+.gate-view::before,
+.thanks-view::before {
+  content: "";
+  position: absolute;
+  width: 240px;
+  aspect-ratio: 1;
+  right: -72px;
+  top: -74px;
+  border: 34px solid rgba(40, 120, 189, 0.12);
+  border-radius: 50%;
+}
+
+.gate-view::after,
+.thanks-view::after {
+  content: "";
+  position: absolute;
+  width: 180px;
+  aspect-ratio: 1;
+  left: -72px;
+  bottom: -78px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(246, 180, 73, 0.22) 0 34%, rgba(232, 93, 90, 0.13) 35% 58%, transparent 59%);
+}
+
+.view-copy,
+.countdown-card,
+.thanks-mark,
+.thanks-view button,
+.close-help {
+  position: relative;
+  z-index: 1;
+}
+
+.view-copy {
+  display: grid;
+  gap: 10px;
+}
+
+.view-copy > p {
   max-width: 760px;
   margin: 0;
   color: var(--muted);
   font-size: 1.08rem;
   line-height: 1.65;
+}
+
+.countdown-card {
+  display: grid;
+  gap: 14px;
+  width: min(780px, 100%);
+  border: 1px solid rgba(15, 118, 110, 0.16);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.82);
+  padding: clamp(14px, 3vw, 22px);
+  box-shadow: 0 18px 42px rgba(40, 120, 189, 0.1);
 }
 
 .countdown-grid {
@@ -185,9 +270,10 @@ select {
 .countdown-grid div {
   display: grid;
   gap: 4px;
-  border: 1px solid rgba(15, 118, 110, 0.2);
+  border: 1px solid rgba(15, 118, 110, 0.18);
   border-radius: 8px;
-  background: #eefbf5;
+  background:
+    linear-gradient(180deg, #ffffff 0%, #eefbf5 100%);
   padding: 18px 14px;
   text-align: center;
 }
@@ -210,9 +296,37 @@ select {
   font-weight: 700;
 }
 
+.window-text {
+  color: var(--teal-dark);
+}
+
+.thanks-view {
+  justify-items: start;
+  background:
+    linear-gradient(90deg, rgba(232, 93, 90, 0.07), transparent 54%),
+    linear-gradient(180deg, #fff 0%, #f7fcfa 100%);
+}
+
+.thanks-mark {
+  display: grid;
+  place-items: center;
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 35% 30%, #fff 0 18%, transparent 19%),
+    linear-gradient(135deg, var(--teal), var(--blue));
+  color: #fff;
+  font-size: 2.8rem;
+  font-weight: 800;
+  box-shadow: 0 18px 36px rgba(15, 118, 110, 0.22);
+}
+
 .student-section {
   border-bottom: 1px solid var(--line);
-  background: linear-gradient(180deg, #fff 0%, #f7fcfa 100%);
+  background:
+    linear-gradient(90deg, rgba(216, 240, 107, 0.12), transparent 40%),
+    linear-gradient(180deg, #fff 0%, #f7fcfa 100%);
 }
 
 h2 {
@@ -322,10 +436,11 @@ select.input-error {
 }
 
 .question-card {
-  border: 1px solid var(--line);
+  border: 1px solid rgba(15, 118, 110, 0.16);
   border-radius: 8px;
   background: var(--panel);
   overflow: hidden;
+  box-shadow: 0 12px 28px rgba(23, 33, 31, 0.045);
 }
 
 .question-head {
@@ -341,7 +456,7 @@ select.input-error {
   width: 38px;
   height: 38px;
   border-radius: 50%;
-  background: var(--mint);
+  background: linear-gradient(135deg, var(--mint), #d8f06b);
   color: var(--teal-dark);
   font-weight: 800;
 }
@@ -367,7 +482,7 @@ select.input-error {
   gap: 10px;
   border: 1px solid #dce8e4;
   border-radius: 8px;
-  background: #fbfefd;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfefd 100%);
   padding: 14px;
   cursor: pointer;
   transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
@@ -376,6 +491,12 @@ select.input-error {
 .option:hover {
   border-color: #8dc9bf;
   background: #f3fbf8;
+}
+
+.option:has(input:checked) {
+  border-color: rgba(40, 120, 189, 0.55);
+  background: linear-gradient(180deg, #eff8ff 0%, #eefbf5 100%);
+  box-shadow: inset 0 0 0 1px rgba(40, 120, 189, 0.22);
 }
 
 .option input {
@@ -432,7 +553,9 @@ select.input-error {
   justify-content: space-between;
   gap: 16px;
   border-top: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.94);
+  background:
+    linear-gradient(90deg, rgba(15, 118, 110, 0.08), rgba(246, 180, 73, 0.08)),
+    rgba(255, 255, 255, 0.94);
   padding: 16px clamp(22px, 4vw, 42px);
   backdrop-filter: blur(16px);
 }
@@ -546,6 +669,25 @@ button:disabled {
 
   .status-area {
     margin-inline: 16px;
+  }
+
+  .gate-view::before,
+  .gate-view::after,
+  .thanks-view::before,
+  .thanks-view::after {
+    display: none;
+  }
+
+  .gate-view::before,
+  .thanks-view::before {
+    right: -118px;
+    width: 190px;
+  }
+
+  .gate-view::after,
+  .thanks-view::after {
+    left: -108px;
+    width: 150px;
   }
 
   button {

@@ -111,6 +111,7 @@ const questions = [
 const form = document.querySelector("#examForm");
 const waitingView = document.querySelector("#waitingView");
 const thanksView = document.querySelector("#thanksView");
+const heroInstructions = document.querySelector(".hero-instructions");
 const questionsContainer = document.querySelector("#questionsContainer");
 const progressText = document.querySelector("#progressText");
 const startTimeText = document.querySelector("#startTimeText");
@@ -138,6 +139,7 @@ const formatter = new Intl.DateTimeFormat("es-MX", {
 });
 
 renderQuestions();
+setPageState("waiting");
 updateGate();
 setInterval(updateGate, 1000);
 setInterval(updateTimer, 1000);
@@ -385,6 +387,7 @@ function updateGate() {
 function startExam() {
   examIsActive = true;
   startTime = new Date();
+  setPageState("exam");
   waitingView.classList.add("is-hidden");
   thanksView.classList.add("is-hidden");
   form.classList.remove("is-hidden");
@@ -394,6 +397,7 @@ function startExam() {
 
 function closeExam(message) {
   examIsActive = false;
+  setPageState("waiting");
   form.classList.add("is-hidden");
   thanksView.classList.add("is-hidden");
   waitingView.classList.remove("is-hidden");
@@ -406,6 +410,7 @@ function closeExam(message) {
 
 function showWaitingView(startAt, message) {
   examIsActive = false;
+  setPageState("waiting");
   form.classList.add("is-hidden");
   thanksView.classList.add("is-hidden");
   waitingView.classList.remove("is-hidden");
@@ -420,6 +425,7 @@ function showWaitingView(startAt, message) {
 
 function showThanksView(isDemo) {
   examSubmitted = true;
+  setPageState("thanks");
   form.classList.add("is-hidden");
   waitingView.classList.add("is-hidden");
   thanksView.classList.remove("is-hidden");
@@ -428,6 +434,11 @@ function showThanksView(isDemo) {
   if (isDemo) {
     thanksView.querySelector("p:not(.section-tag)").textContent = "Tu examen fue validado en modo demostracion. Configura Google Sheets para guardar respuestas reales. Te deseamos mucho exito.";
   }
+}
+
+function setPageState(state) {
+  document.body.dataset.view = state;
+  heroInstructions.setAttribute("aria-hidden", state === "exam" ? "false" : "true");
 }
 
 function showContextError(error) {
