@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#0f766e">
+    <title>Examen de Biologia | Enfermedades no transmisibles</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="shell">
+      <section class="exam-panel" aria-labelledby="exam-title">
+        <header class="hero">
+          <div class="hero-copy">
+            <p class="kicker">Biologia | Evaluacion</p>
+            <h1 id="exam-title">Enfermedades no transmisibles</h1>
+            <p>
+              Lee con calma cada reactivo y elige una sola respuesta. El sistema registrara tu hora
+              de inicio y termino, validara tus datos y evitara respuestas duplicadas.
+            </p>
+          </div>
+          <div class="hero-visual" aria-hidden="true">
+            <div class="cell cell-a"></div>
+            <div class="cell cell-b"></div>
+            <div class="cell cell-c"></div>
+            <div class="dna">
+              <span></span><span></span><span></span><span></span><span></span>
+            </div>
+          </div>
+        </header>
+
+        <section id="waitingView" class="gate-view" aria-labelledby="waiting-title">
+          <p class="section-tag">Acceso programado</p>
+          <h2 id="waiting-title">El examen aun no inicia</h2>
+          <p id="gateMessage">Espera a que llegue la hora indicada. La pagina cambiara automaticamente.</p>
+          <div class="countdown-grid" aria-live="polite">
+            <div>
+              <span>Dias</span>
+              <strong id="daysLeft">00</strong>
+            </div>
+            <div>
+              <span>Horas</span>
+              <strong id="hoursLeft">00</strong>
+            </div>
+            <div>
+              <span>Minutos</span>
+              <strong id="minutesLeft">00</strong>
+            </div>
+            <div>
+              <span>Segundos</span>
+              <strong id="secondsLeft">00</strong>
+            </div>
+          </div>
+          <p class="window-text" id="windowText"></p>
+        </section>
+
+        <form id="examForm" class="is-hidden" novalidate>
+          <section class="student-section" aria-labelledby="student-data-title">
+            <div>
+              <p class="section-tag">Seccion 1 de 2</p>
+              <h2 id="student-data-title">Datos del alumno</h2>
+            </div>
+
+            <div class="field-grid">
+              <label class="field">
+                <span>Correo</span>
+                <input id="email" name="email" type="email" inputmode="email" autocomplete="email" required placeholder="alumno@correo.com">
+                <small>Se usara para validar que solo exista un registro por alumno.</small>
+                <strong class="inline-error" id="emailError" aria-live="polite"></strong>
+              </label>
+
+              <label class="field">
+                <span>Elige tu grupo</span>
+                <select id="group" name="group" required>
+                  <option value="">Selecciona</option>
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="4">4</option>
+                  <option value="5">5</option>
+                  <option value="6">6</option>
+                  <option value="7">7</option>
+                  <option value="8">8</option>
+                  <option value="9">9</option>
+                </select>
+                <strong class="inline-error" id="groupError" aria-live="polite"></strong>
+              </label>
+
+              <label class="field field-wide">
+                <span>Escribe tu nombre completo</span>
+                <input id="studentName" name="studentName" type="text" autocomplete="name" required placeholder="Nombre Apellido Apellido" maxlength="80">
+                <small>Solo letras y espacios. No uses numeros ni simbolos.</small>
+                <strong class="inline-error" id="studentNameError" aria-live="polite"></strong>
+              </label>
+            </div>
+          </section>
+
+          <section class="questions-section" aria-labelledby="questions-title">
+            <div class="section-heading">
+              <div>
+                <p class="section-tag">Seccion 2 de 2</p>
+                <h2 id="questions-title">Instrucciones: elige la respuesta correcta</h2>
+              </div>
+              <div class="timer-box" aria-live="polite">
+                <span>Tiempo</span>
+                <strong id="elapsedTime">00:00</strong>
+              </div>
+            </div>
+
+            <div id="questionsContainer" class="questions" aria-live="polite"></div>
+          </section>
+
+          <div class="status-area" id="statusArea" role="status" aria-live="polite"></div>
+
+          <footer class="submit-bar">
+            <div>
+              <strong id="progressText">0 de 20 contestadas</strong>
+              <span id="startTimeText">Inicio: --</span>
+            </div>
+            <button id="submitButton" type="submit">Enviar examen</button>
+          </footer>
+        </form>
+
+        <section id="thanksView" class="thanks-view is-hidden" aria-labelledby="thanks-title">
+          <p class="section-tag">Examen enviado</p>
+          <h2 id="thanks-title">Gracias por contestar</h2>
+          <p>Tu respuesta fue registrada correctamente. Te deseamos mucho exito.</p>
+          <button id="closePageButton" type="button">Cerrar pagina</button>
+          <p id="closeHelp" class="close-help" hidden>Si el navegador no se cierra automaticamente, puedes cerrar esta pestana manualmente.</p>
+        </section>
+      </section>
+    </main>
+
+    <script src="script.js"></script>
+  </body>
+</html>
