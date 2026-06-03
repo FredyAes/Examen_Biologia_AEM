@@ -124,17 +124,25 @@ let timerInterval   = null;
 const $ = id => document.getElementById(id);
 
 // ─── INICIO ───────────────────────────────────────────────────────────────────
-renderQuestions();
-tickGate();
-gateInterval  = setInterval(tickGate, 1000);
-timerInterval = setInterval(tickTimer, 1000);
+function init() {
+  renderQuestions();
+  tickGate();
+  gateInterval  = setInterval(tickGate, 1000);
+  timerInterval = setInterval(tickTimer, 1000);
 
-$("examForm").addEventListener("submit", onSubmit);
-$("examForm").addEventListener("input",  onInput);
-$("closePageButton").addEventListener("click", () => {
-  window.close();
-  $("closeHelp").hidden = false;
-});
+  $("examForm").addEventListener("submit", onSubmit);
+  $("examForm").addEventListener("input",  onInput);
+  $("closePageButton").addEventListener("click", () => {
+    window.close();
+    $("closeHelp").hidden = false;
+  });
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", init);
+} else {
+  init();
+}
 
 // ─── GATE (ventana horaria) ───────────────────────────────────────────────────
 function tickGate() {
