@@ -1,7 +1,7 @@
 const SHEETS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzvjsBe8Ie6fe1A-LJtnl0TFGe0q1wOdKTHTfT5XToJOVG0my1m-saramB2JxZXv9po7Q/exec";
 const EXAM_STORAGE_PREFIX = "biologia_ent_2026";
 const EXAM_WINDOW = {
-  startAt: "2026-06-03T00:00:00-06:00",
+  startAt: "2026-06-02T00:00:00-06:00",
   endAt: "2026-12-31T23:59:59-06:00"
 };
 
