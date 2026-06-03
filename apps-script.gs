@@ -28,6 +28,10 @@ const QUESTIONS = [
   { number: 20, answer: "Resistencia a la insulina." }
 ];
 
+function doGet(event) {
+  return jsonResponse({ ok: false, message: "Usa POST para enviar el examen." });
+}
+
 function doPost(event) {
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);

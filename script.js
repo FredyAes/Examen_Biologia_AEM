@@ -306,7 +306,13 @@ async function sendPayload(payload) {
     body: JSON.stringify(payload)
   });
 
-  const data = await response.json();
+  let data;
+  try {
+    data = await response.json();
+  } catch {
+    throw new Error("El servidor no respondio correctamente. Verifica que la URL de Apps Script sea valida y este publicada.");
+  }
+
   return data;
 }
 
